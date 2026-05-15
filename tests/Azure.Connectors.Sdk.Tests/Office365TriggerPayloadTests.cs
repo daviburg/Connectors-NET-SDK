@@ -330,5 +330,110 @@ namespace Azure.Connectors.Sdk.Tests
             Assert.IsTrue(typeof(TriggerCallbackPayload<GraphCalendarEventClientWithActionType>)
                 .IsAssignableFrom(typeof(Office365OnCalendarChangedItemsTriggerPayload)));
         }
+
+        #region Single-item payload tests (GitHub issue #149)
+
+        /// <summary>
+        /// Captured single-item OnNewEmailV3 trigger callback (2026-05-14).
+        /// The Connector Namespace delivers the email directly as body — no "value" array.
+        /// Reported by Thiago Almeida. See: https://github.com/Azure/Connectors-NET-SDK/issues/149
+        /// </summary>
+        private const string CapturedSingleItemEmailPayload = """
+            {
+              "body": {
+                "id": "AAMkADQ0MTI1NTBm",
+                "receivedDateTime": "2026-05-14T13:53:19-07:00",
+                "hasAttachments": false,
+                "subject": "Test from OnNewEmailV3 single-item",
+                "bodyPreview": "Single-item trigger payload.",
+                "importance": "normal",
+                "isRead": false,
+                "isHtml": true,
+                "body": "<html><body>Single item</body></html>",
+                "from": "sender@microsoft.com",
+                "toRecipients": "recipient@microsoft.com",
+                "ccRecipients": null,
+                "bccRecipients": null,
+                "replyTo": null,
+                "attachments": []
+              }
+            }
+            """;
+
+        [TestMethod]
+        public void Deserialize_OnNewEmailTriggerPayload_SingleItemShape_Works()
+        {
+            // Act — OnNewEmailV3 delivers single item (GitHub issue #149)
+            var result = JsonSerializer.Deserialize<Office365OnNewEmailTriggerPayload>(
+                Office365TriggerPayloadTests.CapturedSingleItemEmailPayload,
+                Office365TriggerPayloadTests.JsonOptions);
+
+            // Assert — converter normalizes single item into Value list
+            Assert.IsNotNull(result);
+            Assert.IsNotNull(result.Body);
+            Assert.IsNotNull(result.Body.Value);
+            Assert.AreEqual(1, result.Body.Value.Count);
+            Assert.AreEqual("Test from OnNewEmailV3 single-item", result.Body.Value[0].Subject);
+            Assert.AreEqual("sender@microsoft.com", result.Body.Value[0].From);
+            Assert.AreEqual("AAMkADQ0MTI1NTBm", result.Body.Value[0].MessageId);
+        }
+
+        [TestMethod]
+        public void Deserialize_OnFlaggedEmailTriggerPayload_SingleItemShape_Works()
+        {
+            // Act — other email triggers may also deliver single items
+            var result = JsonSerializer.Deserialize<Office365OnFlaggedEmailTriggerPayload>(
+                Office365TriggerPayloadTests.CapturedSingleItemEmailPayload,
+                Office365TriggerPayloadTests.JsonOptions);
+
+            // Assert
+            Assert.IsNotNull(result);
+            Assert.IsNotNull(result.Body);
+            Assert.IsNotNull(result.Body.Value);
+            Assert.AreEqual(1, result.Body.Value.Count);
+            Assert.AreEqual("Test from OnNewEmailV3 single-item", result.Body.Value[0].Subject);
+        }
+
+        [TestMethod]
+        public void Deserialize_OnNewEmailTriggerPayload_BothShapesProduceIdenticalAccess()
+        {
+            // Arrange — deserialize both shapes
+            var batch = JsonSerializer.Deserialize<Office365OnNewEmailTriggerPayload>(
+                Office365TriggerPayloadTests.CapturedEmailTriggerPayload,
+                Office365TriggerPayloadTests.JsonOptions);
+            var single = JsonSerializer.Deserialize<Office365OnNewEmailTriggerPayload>(
+                Office365TriggerPayloadTests.CapturedSingleItemEmailPayload,
+                Office365TriggerPayloadTests.JsonOptions);
+
+            // Assert — both have exactly 1 email accessible via Body.Value[0]
+            Assert.AreEqual(1, batch!.Body!.Value!.Count);
+            Assert.AreEqual(1, single!.Body!.Value!.Count);
+
+            // Assert — Value[0] provides the email for both shapes
+            Assert.IsNotNull(batch.Body.Value[0].Subject);
+            Assert.IsNotNull(single.Body.Value[0].Subject);
+        }
+
+        [TestMethod]
+        public void Deserialize_OnNewEmailTriggerPayload_DynamicLookup_SingleItem()
+        {
+            // Arrange — simulate dynamic lookup for single-item payload
+            var operationName = "OnNewEmailV3";
+            var payloadType = Office365Triggers.Operations[operationName];
+
+            // Act
+            var result = JsonSerializer.Deserialize(
+                Office365TriggerPayloadTests.CapturedSingleItemEmailPayload,
+                payloadType,
+                Office365TriggerPayloadTests.JsonOptions);
+
+            // Assert
+            Assert.IsInstanceOfType(result, typeof(Office365OnNewEmailTriggerPayload));
+            var typed = (Office365OnNewEmailTriggerPayload)result!;
+            Assert.AreEqual(1, typed.Body!.Value!.Count);
+            Assert.AreEqual("Test from OnNewEmailV3 single-item", typed.Body.Value[0].Subject);
+        }
+
+        #endregion Single-item payload tests (GitHub issue #149)
     }
 }

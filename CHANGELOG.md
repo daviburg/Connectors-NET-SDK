@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Constructor overload `(Uri, TokenCredential)` without `ClientOptions` parameter** on `ConnectorClientBase` and all 12 generated clients, following the [Azure SDK constructor guideline](https://azure.github.io/azure-sdk/dotnet_introduction.html#dotnet-client-constructor-minimal) (#123)
 - **`ConnectorHttpClient` now supports mocking** — added protected parameterless constructor and marked `SendAsync` as virtual (#125)
+
+### Fixed
+
+- **`TriggerCallbackPayload<T>` now handles single-item trigger payloads** — some triggers (e.g., Office365 `OnNewEmailV3`) deliver a single item directly in `body` instead of the swagger-documented `{"value":[...]}` array. A custom `JsonConverter` on `TriggerCallbackBody<T>` auto-detects the shape and normalizes single items into the `Value` list, so `payload.Body.Value` works for both batch and single-item triggers (#149)
 - **5 new connector clients** — `ExcelOnlineClient`, `AzureEventGridClient`, `YammerClient`, `WdatpClient` (Microsoft Defender ATP), `UniversalPrintClient` (#7)
 - **15 more connector clients (batch 2)** — `CampfireClient`, `ClickSendSmsClient`, `CloudmersiveConvertClient`, `EtsyClient`, `FormstackFormsClient`, `FreshServiceClient`, `InfusionsoftClient`, `InsightlyClient`, `PipedriveClient`, `PlivoClient`, `PlumsailClient`, `RepliconClient`, `RevaiClient`, `SigningHubClient`, `ZohoSignClient` (#7)
 - **15 more connector clients (batch 3)** — `DocuwareClient`, `ElfsquadDataClient`, `ImpexiumClient`, `JedoxOdataHubClient`, `MeetingRoomMapClient`, `OrderfulClient`, `PdfCoClient`, `ProjectplaceClient`, `SeismicPlannerClient`, `StarmindClient`, `StarrezRestV1Client`, `TallyfyClient`, `TextRequestClient`, `TicketmasterClient`, `WaywedoClient` (#7)
